@@ -11,4 +11,4 @@ def get_server():
 
 # Run the DNS registry server
 if __name__ == '__main__':
-    app.run(host='localhost', port=3002)
+    app.run(host='localhost', port=3001)
