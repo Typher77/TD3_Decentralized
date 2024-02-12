@@ -25,16 +25,12 @@ def predict():
     args = request.args
     input_data = [[float(args['sepal.length']), float(args['sepal.width']), float(args['petal.length']), float(args['petal.width'])]]
     
-    # Utiliser predict_proba au lieu de predict
     probabilities = model.predict_proba(input_data).tolist()[0]
     
-    # Récupérer les noms de classe du modèle
     class_names = model.classes_
-    
-    # Créer une liste de dictionnaires avec le nom de la classe et sa probabilité
+
     class_probabilities = [{'class': class_name, 'probability': probability} for class_name, probability in zip(class_names, probabilities)]
     
-    # Créer une réponse avec la liste de dictionnaires
     response = {'class_probabilities': class_probabilities}
     
     return jsonify(response)
