@@ -8,4 +8,4 @@ def get_server():
     return jsonify({"code": 200, "server": server_url})
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=3002)
+    app.run(host='localhost', port=3001)
