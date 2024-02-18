@@ -1,0 +1,13 @@
+<html>
+    <head>
+        <title>Getting the product id </title>
+    </head>
+    <body>
+        <h1>get product id </h1>
+        {% for product in products%}
+            <p> id={{product[0]}}, name={{product[1]}}, description ={{product[2]}}, price ={{product[3]}}, category= {{product[4]}}, inStock={{product[5]}}</p>
+            
+        {%endfor%}
+        <a href="/">Back to Home</a>
+    </body>
+</html>
