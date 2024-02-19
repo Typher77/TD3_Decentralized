@@ -1,0 +1,66 @@
+import requests
+from tabulate import tabulate
+
+def get_prediction(url, sepal_length, sepal_width, petal_length, petal_width):
+    params = {
+        "sepal.length": sepal_length,
+        "sepal.width": sepal_width,
+        "petal.length": petal_length,
+        "petal.width": petal_width
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error {response.status_code} for URL: {url}")
+        return None
+
+def get_predictions_for_urls(urls, sepal_length, sepal_width, petal_length, petal_width):
+    predictions = []
+    accuracies = []
+    for url in urls:
+        prediction = get_prediction(url, sepal_length, sepal_width, petal_length, petal_width)
+        if prediction:
+            predictions.append(prediction)
+            accuracies.append(sum(prediction['accuracy_per_class'].values()) / len(prediction['accuracy_per_class']))
+    return predictions, accuracies
+
+def aggregate_predictions(predictions, accuracies):
+    consensus_prediction = {"class_probabilities": []}
+    total_accuracy = sum(accuracies)
+    
+    for i in range(len(predictions[0]["class_probabilities"])):
+        class_name = predictions[0]["class_probabilities"][i]["class"]
+        weighted_sum = sum(prediction["class_probabilities"][i]["probability"] * accuracy for prediction, accuracy in zip(predictions, accuracies))
+        weighted_average = weighted_sum / total_accuracy
+        consensus_prediction["class_probabilities"].append({"class": class_name, "probability": weighted_average})
+    
+    return consensus_prediction
+
+def main():
+    urls = [
+        "https://aaed-2a01-e0a-344-4120-90d7-189e-bc76-4936.ngrok-free.app/predict",
+        "https://12c6-2001-861-4340-2cc0-19fa-a90-78dc-fc8.ngrok-free.app/predict"
+    ]
+    sepal_length = 2.1
+    sepal_width = 1.5
+    petal_length = 1.8
+    petal_width = 1.2
+
+    predictions, accuracies = get_predictions_for_urls(urls, sepal_length, sepal_width, petal_length, petal_width)
+    model_predictions = [(f"Model {i+1}", prediction["class_probabilities"], prediction["accuracy_per_class"]) for i, prediction in enumerate(predictions)]
+    for model, prediction, accuracy_per_class in model_predictions:
+        print(f"{model} prediction:")
+        table = [["Class", "Probability", "Accuracy"]]
+        table.extend([[class_prob["class"], class_prob["probability"], accuracy_per_class.get(class_prob["class"], "N/A")] for class_prob in prediction])
+        print(tabulate(table, headers="firstrow", tablefmt="pretty"))
+        print("\n")
+    
+    consensus_prediction = aggregate_predictions(predictions, accuracies)
+    print("Consensus prediction:")
+    table = [["Class", "Probability"]]
+    table.extend([[class_prob["class"], class_prob["probability"]] for class_prob in consensus_prediction["class_probabilities"]])
+    print(tabulate(table, headers="firstrow", tablefmt="pretty"))
+
+if __name__ == "__main__":
+    main()
