@@ -116,7 +116,108 @@ def delete_product(id):
     conn.close()
     return ' The product was deleted '
 
+@app.route('/orders', methods=['POST'])
+def create_order():
+    data = request.get_json()
+
+    user_id = data.get('user_id')
+    products = data.get('products', [])
+    total_price =data.get('total_price')
+    status = 'pending'
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, ?)
+    ''', (user_id, total_price, status))
+
+    order_id = cursor.lastrowid
+
+    for product in products:
+        product_id = product.get('product_id')
+        quantity = product.get('quantity')
+        cursor.execute('''
+            INSERT INTO orders (order_id, product_id, quantity) VALUES (?, ?, ?)
+        ''', (order_id, product_id, quantity))
+
+    conn.commit()
+
+    cursor.execute("SELECT * FROM orders WHERE order_id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    conn.close()
+
+    return jsonify({
+        "order_id": order["order_id"],
+        "user_id": order["user_id"],
+        "total_price": order["total_price"],
+        "status": order["status"]
+    })    
+
+@app.route('/orders/<int:user_id>', methods=['GET'])
+def get_user_orders(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM orders WHERE user_id = ?", (user_id,))
+    orders = cursor.fetchall()
+
+    conn.close()
+
+    return jsonify([{
+        "order_id": order["order_id"],
+        "user_id": order["user_id"],
+        "total_price": order["total_price"],
+        "status": order["status"]
+    } for order in orders])
+
+@app.route('/cart/<int:user_id>', methods=['GET'])
+def get_cart(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT cart.user_id, cart.product_id, products.product_name, cart.quantity, products.product_price
+        FROM cart
+        JOIN products ON cart.product_id = products.product_id
+        WHERE cart.user_id = ?
+    ''', (user_id,))
+
+    cart_contents = cursor.fetchall()
+
+    conn.close()
+
+    total_price = sum(item["product_price"] * item["quantity"] for item in cart_contents)
+
+    return jsonify({
+        "user_id": user_id,
+        "cart_contents": cart_contents,
+        "total_price": total_price
+    })
+
+@app.route('/cart/<int:user_id>/item/<int:product_id>', methods=['DELETE'])
+def remove_from_cart(user_id, product_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        DELETE FROM cart WHERE user_id = ? AND product_id = ?
+    ''', (user_id, product_id))
+
+    conn.commit()
     
+    cursor.execute("SELECT * FROM products WHERE product_id = ?", (product_id,))
+    product = cursor.fetchone()
+
+    conn.close()
+
+    return jsonify({
+        "user_id": user_id,
+        "product_id": product["product_id"],
+        "product_name": product["product_name"],
+        "message": "Product removed from cart successfully."
+    })
 
 if __name__ == '__main__':
     app.run(host='localhost', port=3001)
